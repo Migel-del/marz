@@ -33,12 +33,23 @@ get_certificate(){
 
 download_xray_core(){
   local ver="$XRAY_FIXED_VERSION" arch
-  case "$(uname -m)" in amd64|x86_64) arch=64;; aarch64|armv8*) arch=arm64-v8a;; *) error "Unsupported arch";; esac
-  local f="Xray-linux-${arch}.zip" url="https://github.com/XTLS/Xray-core/releases/download/${ver}/${f}"
-  wget -q "$url" -O "/tmp/${f}"; unzip -o "/tmp/${f}" -d "$INSTALL_DIR"; rm "/tmp/${f}"
+  case "$(uname -m)" in
+    i386|i686) arch=32;;
+    amd64|x86_64) arch=64;;
+    aarch64|arm64|armv8*) arch=arm64-v8a;;
+    armv7l|armv7*) arch=arm32-v7a;;
+    *) error "Unsupported arch: $(uname -m)";;
+  esac
+
+  local f="Xray-linux-${arch}.zip"
+  local url="https://github.com/XTLS/Xray-core/releases/download/${ver}/${f}"
+  log "Downloading Xray-core $ver for arch $arch"
+  wget -q "$url" -O "/tmp/${f}" || error "Download failed"
+  unzip -o "/tmp/${f}" -d "$INSTALL_DIR"; rm "/tmp/${f}"
   chmod +x "${INSTALL_DIR}/xray"
-  wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -O "${INSTALL_DIR}/data/geoip.dat"
-  wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O "${INSTALL_DIR}/data/geosite.dat"
+
+  wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -O "$INSTALL_DIR/data/geoip.dat"
+  wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O "$INSTALL_DIR/data/geosite.dat"
   success "Xray-core $ver installed"
 }
 
@@ -75,14 +86,19 @@ install_marznode(){
   success "MarzNode installed on port $SERVICE_PORT"
 }
 
+uninstall_marznode(){ docker-compose -f "$COMPOSE_FILE" down --remove-orphans || true; rm -rf "$INSTALL_DIR"; success "Uninstalled"; }
+restart_marznode(){ docker-compose -f "$COMPOSE_FILE" down; docker-compose -f "$COMPOSE_FILE" up -d; success "Restarted"; }
+status_marznode(){ docker ps | grep marznode && success "Running" || error "Stopped"; }
+logs_marznode(){ docker-compose -f "$COMPOSE_FILE" logs --tail=100 -f; }
+
 main(){
   check_root
   case "${1:-}" in
     install) install_marznode;;
-    uninstall) docker-compose -f "$COMPOSE_FILE" down --remove-orphans || true; rm -rf "$INSTALL_DIR"; success "Uninstalled";;
-    restart) docker-compose -f "$COMPOSE_FILE" down; docker-compose -f "$COMPOSE_FILE" up -d; success "Restarted";;
-    status) docker ps | grep marznode && success "Running" || error "Stopped";;
-    logs) docker-compose -f "$COMPOSE_FILE" logs --tail=100 -f;;
+    uninstall) uninstall_marznode;;
+    restart) restart_marznode;;
+    status) status_marznode;;
+    logs) logs_marznode;;
     *) echo "Usage: CERT_PASS=xxxx bash <(curl -fsSL https://raw.githubusercontent.com/Migel-del/marz/main/install_node.sh) install|uninstall|restart|status|logs";;
   esac
 }
