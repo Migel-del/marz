@@ -91,6 +91,18 @@ restart_marznode(){ docker-compose -f "$COMPOSE_FILE" down; docker-compose -f "$
 status_marznode(){ docker ps | grep marznode && success "Running" || error "Stopped"; }
 logs_marznode(){ docker-compose -f "$COMPOSE_FILE" logs --tail=100 -f; }
 
+print_help() {
+  echo "Usage: marznode <command>"
+  echo
+  echo "Commands:"
+  echo "  install    Install MarzNode"
+  echo "  uninstall  Uninstall MarzNode"
+  echo "  restart    Restart MarzNode"
+  echo "  status     Show MarzNode status"
+  echo "  logs       Show logs"
+  echo "  help       Show this help message"
+}
+
 main(){
   check_root
   case "${1:-}" in
@@ -99,6 +111,7 @@ main(){
     restart) restart_marznode;;
     status) status_marznode;;
     logs) logs_marznode;;
+    help|*) print_help;;
     *) echo "Usage: CERT_PASS=xxxx bash <(curl -fsSL https://raw.githubusercontent.com/Migel-del/marz/main/install_node.sh) install|uninstall|restart|status|logs";;
   esac
 }
