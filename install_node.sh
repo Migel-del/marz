@@ -16,11 +16,24 @@ success(){ echo -e "\033[0;32m[SUCCESS]\033[0m $*"; }
 check_root(){ [[ $EUID -eq 0 ]] || error "Must be run as root"; }
 
 check_dependencies(){
-  local pkgs=(docker docker-compose curl wget unzip git jq)
+  local pkgs=(docker curl wget unzip git jq)
   local missing=()
   for p in "${pkgs[@]}"; do command -v "$p" &>/dev/null || missing+=("$p"); done
-  if [[ ${#missing[@]} -gt 0 ]]; then apt update && apt install -y "${missing[@]}"; fi
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    apt update && apt install -y "${missing[@]}"
+  fi
   command -v docker &>/dev/null || curl -fsSL https://get.docker.com | sh
+}
+
+# === Универсальный вызов docker-compose / docker compose ===
+compose() {
+  if command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
+  elif docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  else
+    error "Neither docker-compose nor docker compose found!"
+  fi
 }
 
 get_certificate(){
@@ -48,6 +61,7 @@ download_xray_core(){
   unzip -o "/tmp/${f}" -d "$INSTALL_DIR"; rm "/tmp/${f}"
   chmod +x "${INSTALL_DIR}/xray"
 
+  mkdir -p "$INSTALL_DIR/data"
   wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -O "$INSTALL_DIR/data/geoip.dat"
   wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O "$INSTALL_DIR/data/geosite.dat"
   success "Xray-core $ver installed"
@@ -82,14 +96,29 @@ install_marznode(){
   cp "$INSTALL_DIR/repo/xray_config.json" "$INSTALL_DIR/xray_config.json"
   download_xray_core
   setup_docker_compose
-  docker-compose -f "$COMPOSE_FILE" up -d
+  compose -f "$COMPOSE_FILE" up -d
   success "MarzNode installed on port $SERVICE_PORT"
 }
 
-uninstall_marznode(){ docker-compose -f "$COMPOSE_FILE" down --remove-orphans || true; rm -rf "$INSTALL_DIR"; success "Uninstalled"; }
-restart_marznode(){ docker-compose -f "$COMPOSE_FILE" down; docker-compose -f "$COMPOSE_FILE" up -d; success "Restarted"; }
-status_marznode(){ docker ps | grep marznode && success "Running" || error "Stopped"; }
-logs_marznode(){ docker-compose -f "$COMPOSE_FILE" logs --tail=100 -f; }
+uninstall_marznode(){
+  compose -f "$COMPOSE_FILE" down --remove-orphans || true
+  rm -rf "$INSTALL_DIR"
+  success "Uninstalled"
+}
+
+restart_marznode(){
+  compose -f "$COMPOSE_FILE" down
+  compose -f "$COMPOSE_FILE" up -d
+  success "Restarted"
+}
+
+status_marznode(){
+  docker ps | grep marznode && success "Running" || error "Stopped"
+}
+
+logs_marznode(){
+  compose -f "$COMPOSE_FILE" logs --tail=100 -f
+}
 
 print_help() {
   echo "Usage: marznode <command>"
@@ -112,7 +141,6 @@ main(){
     status) status_marznode;;
     logs) logs_marznode;;
     help|*) print_help;;
-    *) echo "Usage: CERT_PASS=xxxx bash <(curl -fsSL https://raw.githubusercontent.com/Migel-del/marz/main/install_node.sh) install|uninstall|restart|status|logs";;
   esac
 }
 main "$@"
