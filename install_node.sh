@@ -69,6 +69,8 @@ download_xray_core(){
 
 setup_docker_compose(){
 cat > "$COMPOSE_FILE" <<EOF
+version: '3.9'
+
 services:
   marznode:
     image: dawsh/marznode:latest
