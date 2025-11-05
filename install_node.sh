@@ -68,12 +68,16 @@ download_xray_core(){
 }
 
 setup_docker_compose(){
-cat > "$COMPOSE_FILE" <<EOF
-version: '3.9'
+  local version_line=""
+  if command -v docker-compose >/dev/null 2>&1; then
+    version_line="version: '3.3'"
+  fi
 
+cat > "$COMPOSE_FILE" <<EOF
+${version_line}
 services:
   marznode:
-    image: dawsh/marznode:latest
+    image: dawsh/marznode:latests
     restart: always
     network_mode: host
     environment:
@@ -87,7 +91,7 @@ services:
     volumes:
       - ${INSTALL_DIR}:/var/lib/marznode
 EOF
-success "docker-compose.yml created"
+  success "docker-compose.yml created"
 }
 
 install_marznode(){
