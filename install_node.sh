@@ -77,7 +77,7 @@ cat > "$COMPOSE_FILE" <<EOF
 ${version_line}
 services:
   marznode:
-    image: dawsh/marznode:latests
+    image: dawsh/marznode:latest
     restart: always
     network_mode: host
     environment:
