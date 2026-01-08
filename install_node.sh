@@ -5,7 +5,7 @@ IFS=$'\n\t'
 INSTALL_DIR="/var/lib/marznode"
 COMPOSE_FILE="${INSTALL_DIR}/docker-compose.yml"
 GITHUB_REPO="https://github.com/marzneshin/marznode.git"
-XRAY_FIXED_VERSION="v25.8.3"
+XRAY_FIXED_VERSION="v25.10.15"
 SERVICE_PORT="5566"
 CERT_PASS="${CERT_PASS:-}"
 
